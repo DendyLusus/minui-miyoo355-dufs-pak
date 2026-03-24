@@ -1,46 +1,7 @@
-/**
- * @typedef {object} PathItem
- * @property {"Dir"|"SymlinkDir"|"File"|"SymlinkFile"} path_type
- * @property {string} name
- * @property {number} mtime
- * @property {number} size
- */
-
-/**
- * @typedef {object} DATA
- * @property {string} href
- * @property {string} uri_prefix
- * @property {"Index" | "Edit" | "View"} kind
- * @property {PathItem[]} paths
- * @property {boolean} allow_upload
- * @property {boolean} allow_delete
- * @property {boolean} allow_search
- * @property {boolean} allow_archive
- * @property {boolean} auth
- * @property {string} user
- * @property {boolean} dir_exists
- * @property {string} editable
- */
-
 var DUFS_MAX_UPLOADINGS = 1;
-
-/**
- * @type {DATA} DATA
- */
 var DATA;
-
-/**
- * @type {string}
- */
 var DIR_EMPTY_NOTE;
 
-/**
- * @type {PARAMS}
- * @typedef {object} PARAMS
- * @property {string} q
- * @property {string} sort
- * @property {string} order
- */
 const PARAMS = Object.fromEntries(new URLSearchParams(window.location.search).entries());
 
 const IFRAME_FORMATS = [
@@ -62,61 +23,28 @@ const ICONS = {
   edit: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>`,
   delete: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M6.854 7.146a.5.5 0 1 0-.708.708L7.293 9l-1.147 1.146a.5.5 0 0 0 .708.708L8 9.707l1.146 1.147a.5.5 0 0 0 .708-.708L8.707 9l1.147-1.146a.5.5 0 0 0-.708-.708L8 8.293 6.854 7.146z"/><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/></svg>`,
   view: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1"/></svg>`,
-}
+};
 
-/**
- * @type Map<string, Uploader>
- */
 const failUploaders = new Map();
 
-/**
- * @type Element
- */
 let $pathsTable;
-/**
- * @type Element
- */
 let $pathsTableHead;
-/**
- * @type Element
- */
 let $pathsTableBody;
-/**
- * @type Element
- */
 let $uploadersTable;
-/**
- * @type Element
- */
 let $emptyFolder;
-/**
- * @type Element
- */
 let $editor;
-/**
- * @type Element
- */
 let $loginBtn;
-/**
- * @type Element
- */
 let $logoutBtn;
-/**
- * @type Element
- */
 let $userName;
 
-// Produce table when window loads
 window.addEventListener("DOMContentLoaded", async () => {
-  const $indexData = document.getElementById('index-data');
+  const $indexData = document.getElementById("index-data");
   if (!$indexData) {
     alert("No data");
     return;
   }
-
   DATA = JSON.parse(decodeBase64($indexData.innerHTML));
-  DIR_EMPTY_NOTE = PARAMS.q ? 'No results' : DATA.dir_exists ? 'Empty folder' : 'Folder will be created when a file is uploaded';
-
+  DIR_EMPTY_NOTE = PARAMS.q ? "No results" : DATA.dir_exists ? "Empty folder" : "Folder will be created when a file is uploaded";
   await ready();
 });
 
@@ -136,32 +64,21 @@ async function ready() {
   if (DATA.kind === "Index") {
     document.title = `Index of ${DATA.href} - Dufs`;
     document.querySelector(".index-page").classList.remove("hidden");
-
     await setupIndexPage();
   } else if (DATA.kind === "Edit") {
     document.title = `Edit ${DATA.href} - Dufs`;
     document.querySelector(".editor-page").classList.remove("hidden");
-
     await setupEditorPage();
   } else if (DATA.kind === "View") {
     document.title = `View ${DATA.href} - Dufs`;
     document.querySelector(".editor-page").classList.remove("hidden");
-
     await setupEditorPage();
   }
 }
 
 class Uploader {
-  /**
-   *
-   * @param {File} file
-   * @param {string[]} pathParts
-   */
   constructor(file, pathParts) {
-    /**
-     * @type Element
-     */
-    this.$uploadStatus = null
+    this.$uploadStatus = null;
     this.uploaded = 0;
     this.uploadOffset = 0;
     this.lastUptime = 0;
@@ -187,13 +104,11 @@ class Uploader {
     $uploadersTable.classList.remove("hidden");
     $emptyFolder.classList.add("hidden");
     this.$uploadStatus = document.getElementById(`uploadStatus${idx}`);
-    this.$uploadStatus.innerHTML = '-';
+    this.$uploadStatus.innerHTML = "-";
     this.$uploadStatus.addEventListener("click", e => {
-      const nodeId = e.target.id;
-      const matches = /^retry(\d+)$/.exec(nodeId);
+      const matches = /^retry(\d+)$/.exec(e.target.id);
       if (matches) {
-        const id = parseInt(matches[1]);
-        let uploader = failUploaders.get(id);
+        const uploader = failUploaders.get(parseInt(matches[1]));
         if (uploader) uploader.retry();
       }
     });
@@ -203,7 +118,6 @@ class Uploader {
 
   ajax() {
     const { url } = this;
-
     this.uploaded = 0;
     this.lastUptime = Date.now();
 
@@ -213,13 +127,11 @@ class Uploader {
       if (ajax.readyState === 4) {
         if (ajax.status >= 200 && ajax.status < 300) {
           this.complete();
-        } else {
-          if (ajax.status != 0) {
-            this.fail(`${ajax.status} ${ajax.statusText}`);
-          }
+        } else if (ajax.status != 0) {
+          this.fail(`${ajax.status} ${ajax.statusText}`);
         }
       }
-    })
+    });
     ajax.addEventListener("error", () => this.fail(), false);
     ajax.addEventListener("abort", () => this.fail(), false);
     if (this.uploadOffset > 0) {
@@ -229,19 +141,15 @@ class Uploader {
     } else {
       ajax.open("PUT", url);
       ajax.send(this.file);
-      // setTimeout(() => ajax.abort(), 3000);
     }
   }
 
   async retry() {
     const { url } = this;
-    let res = await fetch(url, {
-      method: "HEAD",
-    });
+    const res = await fetch(url, { method: "HEAD" });
     let uploadOffset = 0;
     if (res.status == 200) {
-      let value = res.headers.get("content-length");
-      uploadOffset = parseInt(value) || 0;
+      uploadOffset = parseInt(res.headers.get("content-length")) || 0;
     }
     this.uploadOffset = uploadOffset;
     this.ajax();
@@ -254,15 +162,15 @@ class Uploader {
     const speedText = `${speedValue} ${speedUnit}/s`;
     const progress = formatPercent(((event.loaded + this.uploadOffset) / this.file.size) * 100);
     const duration = formatDuration((event.total - event.loaded) / speed);
-    this.$uploadStatus.innerHTML = `<span style="width: 80px;">${speedText}</span><span>${progress} ${duration}</span>`;
+    this.$uploadStatus.innerHTML = `<span style="width:80px">${speedText}</span><span>${progress} ${duration}</span>`;
     this.uploaded = event.loaded;
     this.lastUptime = now;
   }
 
   complete() {
-    const $uploadStatusNew = this.$uploadStatus.cloneNode(true);
-    $uploadStatusNew.innerHTML = `✓`;
-    this.$uploadStatus.parentNode.replaceChild($uploadStatusNew, this.$uploadStatus);
+    const $new = this.$uploadStatus.cloneNode(true);
+    $new.innerHTML = `\u2713`;
+    this.$uploadStatus.parentNode.replaceChild($new, this.$uploadStatus);
     this.$uploadStatus = null;
     failUploaders.delete(this.idx);
     Uploader.runnings--;
@@ -270,7 +178,7 @@ class Uploader {
   }
 
   fail(reason = "") {
-    this.$uploadStatus.innerHTML = `<span style="width: 20px;" title="${reason}">✗</span><span class="retry-btn" id="retry${this.idx}" title="Retry">↻</span>`;
+    this.$uploadStatus.innerHTML = `<span style="width:20px" title="${reason}">\u2717</span><span class="retry-btn" id="retry${this.idx}" title="Retry">\u21BB</span>`;
     failUploaders.set(this.idx, this);
     Uploader.runnings--;
     Uploader.runQueue();
@@ -278,54 +186,31 @@ class Uploader {
 }
 
 Uploader.globalIdx = 0;
-
 Uploader.runnings = 0;
-
 Uploader.auth = false;
-
-/**
- * @type Uploader[]
- */
 Uploader.queues = [];
-
 
 Uploader.runQueue = async () => {
   if (Uploader.runnings >= DUFS_MAX_UPLOADINGS) return;
   if (Uploader.queues.length == 0) return;
   Uploader.runnings++;
-  let uploader = Uploader.queues.shift();
+  const uploader = Uploader.queues.shift();
   if (!Uploader.auth) {
     Uploader.auth = true;
-    try {
-      await checkAuth();
-    } catch {
-      Uploader.auth = false;
-    }
+    try { await checkAuth(); } catch { Uploader.auth = false; }
   }
   uploader.ajax();
-}
+};
 
-/**
- * Add breadcrumb
- * @param {string} href
- * @param {string} uri_prefix
- */
 function addBreadcrumb(href, uri_prefix) {
   const $breadcrumb = document.querySelector(".breadcrumb");
-  let parts = [];
-  if (href === "/") {
-    parts = [""];
-  } else {
-    parts = href.split("/");
-  }
+  const parts = href === "/" ? [""] : href.split("/");
   const len = parts.length;
   let path = uri_prefix;
   for (let i = 0; i < len; i++) {
     const name = parts[i];
     if (i > 0) {
-      if (!path.endsWith("/")) {
-        path += "/";
-      }
+      if (!path.endsWith("/")) path += "/";
       path += encodeURIComponent(name);
     }
     const encodedName = encodedStr(name);
@@ -374,59 +259,37 @@ async function setupIndexPage() {
   }
 }
 
-/**
- * Render path table thead
- */
 function renderPathsTableHead() {
   const headerItems = [
-    {
-      name: "name",
-      props: `colspan="2"`,
-      text: "Name",
-    },
-    {
-      name: "mtime",
-      props: ``,
-      text: "Last Modified",
-    },
-    {
-      name: "size",
-      props: ``,
-      text: "Size",
-    }
+    { name: "name", props: `colspan="2"`, text: "Name" },
+    { name: "mtime", props: ``, text: "Modified" },
+    { name: "size", props: ``, text: "Size" },
   ];
   $pathsTableHead.insertAdjacentHTML("beforeend", `
     <tr>
       ${headerItems.map(item => {
-    let svg = `<svg width="12" height="12" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.5 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L11 2.707V14.5a.5.5 0 0 0 .5.5zm-7-14a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L4 13.293V1.5a.5.5 0 0 1 .5-.5z"/></svg>`;
-    let order = "desc";
-    if (PARAMS.sort === item.name) {
-      if (PARAMS.order === "desc") {
-        order = "asc";
-        svg = `<svg width="12" height="12" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>`
-      } else {
-        svg = `<svg width="12" height="12" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>`
-      }
-    }
-    const qs = new URLSearchParams({ ...PARAMS, order, sort: item.name }).toString();
-    const icon = `<span>${svg}</span>`
-    return `<th class="cell-${item.name}" ${item.props}><a href="?${qs}">${item.text}${icon}</a></th>`
-  }).join("\n")}
+        let svg = `<svg width="12" height="12" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.5 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L11 2.707V14.5a.5.5 0 0 0 .5.5zm-7-14a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L4 13.293V1.5a.5.5 0 0 1 .5-.5z"/></svg>`;
+        let order = "desc";
+        if (PARAMS.sort === item.name) {
+          if (PARAMS.order === "desc") {
+            order = "asc";
+            svg = `<svg width="12" height="12" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>`;
+          } else {
+            svg = `<svg width="12" height="12" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>`;
+          }
+        }
+        const qs = new URLSearchParams({ ...PARAMS, order, sort: item.name }).toString();
+        return `<th class="cell-${item.name}" ${item.props}><a href="?${qs}">${item.text}<span>${svg}</span></a></th>`;
+      }).join("\n")}
       <th class="cell-actions">Actions</th>
     </tr>
   `);
 }
 
-/**
- * Render path table tbody
- */
 function renderPathsTableBody() {
   if (DATA.paths && DATA.paths.length > 0) {
-    const len = DATA.paths.length;
-    if (len > 0) {
-      $pathsTable.classList.remove("hidden");
-    }
-    for (let i = 0; i < len; i++) {
+    $pathsTable.classList.remove("hidden");
+    for (let i = 0; i < DATA.paths.length; i++) {
       addPath(DATA.paths[i], i);
     }
   } else {
@@ -435,11 +298,6 @@ function renderPathsTableBody() {
   }
 }
 
-/**
- * Add pathitem
- * @param {PathItem} file
- * @param {number} index
- */
 function addPath(file, index) {
   const encodedName = encodedStr(file.name);
   let url = newUrl(file.name);
@@ -448,65 +306,46 @@ function addPath(file, index) {
   let actionMove = "";
   let actionEdit = "";
   let actionView = "";
-  let isDir = file.path_type.endsWith("Dir");
+  const isDir = file.path_type.endsWith("Dir");
+
   if (isDir) {
     url += "/";
     if (DATA.allow_archive) {
-      actionDownload = `
-      <div class="action-btn">
-        <a class="dlwt" href="${url}?zip" title="Download folder as a .zip file" download>${ICONS.download}</a>
-      </div>`;
+      actionDownload = `<div class="action-btn"><a class="dlwt" href="${url}?zip" title="Download as .zip" download>${ICONS.download}</a></div>`;
     }
   } else {
-    actionDownload = `
-    <div class="action-btn" >
-      <a class="dlwt" href="${url}" title="Download file" download>${ICONS.download}</a>
-    </div>`;
+    actionDownload = `<div class="action-btn"><a class="dlwt" href="${url}" title="Download" download>${ICONS.download}</a></div>`;
   }
+
   if (DATA.allow_delete) {
     if (DATA.allow_upload) {
-      actionMove = `<div onclick="movePath(${index})" class="action-btn" id="moveBtn${index}" title="Move to new path">${ICONS.move}</div>`;
+      actionMove = `<div onclick="movePath(${index})" class="action-btn" id="moveBtn${index}" title="Move">${ICONS.move}</div>`;
       if (!isDir) {
-        actionEdit = `<a class="action-btn" title="Edit file" target="_blank" href="${url}?edit">${ICONS.edit}</a>`;
+        actionEdit = `<a class="action-btn" title="Edit" target="_blank" href="${url}?edit">${ICONS.edit}</a>`;
       }
     }
-    actionDelete = `
-    <div onclick="deletePath(${index})" class="action-btn" id="deleteBtn${index}" title="Delete">${ICONS.delete}</div>`;
+    actionDelete = `<div onclick="deletePath(${index})" class="action-btn" id="deleteBtn${index}" title="Delete">${ICONS.delete}</div>`;
   }
-  if (!actionEdit && !isDir) {
-    actionView = `<a class="action-btn" title="View file" target="_blank" href="${url}?view">${ICONS.view}</a>`;
-  }
-  let actionCell = `
-  <td class="cell-actions">
-    ${actionDownload}
-    ${actionView}
-    ${actionMove}
-    ${actionDelete}
-    ${actionEdit}
-  </td>`;
 
-  let sizeDisplay = isDir ? formatDirSize(file.size) : formatFileSize(file.size).join(" ");
+  if (!actionEdit && !isDir) {
+    actionView = `<a class="action-btn" title="View" target="_blank" href="${url}?view">${ICONS.view}</a>`;
+  }
+
+  const sizeDisplay = isDir ? formatDirSize(file.size) : formatFileSize(file.size).join(" ");
 
   $pathsTableBody.insertAdjacentHTML("beforeend", `
 <tr id="addPath${index}">
-  <td class="path cell-icon">
-    ${getPathSvg(file.path_type)}
-  </td>
-  <td class="path cell-name">
-    <a href="${url}" ${isDir ? "" : `target="_blank"`}>${encodedName}</a>
-  </td>
+  <td class="path cell-icon">${getPathSvg(file.path_type)}</td>
+  <td class="path cell-name"><a href="${url}" ${isDir ? "" : `target="_blank"`}>${encodedName}</a></td>
   <td class="cell-mtime">${formatMtime(file.mtime)}</td>
   <td class="cell-size">${sizeDisplay}</td>
-  ${actionCell}
+  <td class="cell-actions">${actionDownload}${actionView}${actionMove}${actionDelete}${actionEdit}</td>
 </tr>`);
 }
 
 function setupDropzone() {
   ["drag", "dragstart", "dragend", "dragover", "dragenter", "dragleave", "drop"].forEach(name => {
-    document.addEventListener(name, e => {
-      e.preventDefault();
-      e.stopPropagation();
-    });
+    document.addEventListener(name, e => { e.preventDefault(); e.stopPropagation(); });
   });
   document.addEventListener("drop", async e => {
     if (!e.dataTransfer.items[0].webkitGetAsEntry) {
@@ -516,8 +355,7 @@ function setupDropzone() {
       }
     } else {
       const entries = [];
-      const len = e.dataTransfer.items.length;
-      for (let i = 0; i < len; i++) {
+      for (let i = 0; i < e.dataTransfer.items.length; i++) {
         entries.push(e.dataTransfer.items[i].webkitGetAsEntry());
       }
       addFileEntries(entries, []);
@@ -533,9 +371,7 @@ async function setupAuth() {
   } else {
     $loginBtn.classList.remove("hidden");
     $loginBtn.addEventListener("click", async () => {
-      try {
-        await checkAuth("login");
-      } catch { }
+      try { await checkAuth("login"); } catch {}
       location.reload();
     });
   }
@@ -573,24 +409,20 @@ function setupSearch() {
   $searchbar.classList.remove("hidden");
   $searchbar.addEventListener("submit", event => {
     event.preventDefault();
-    const formData = new FormData($searchbar);
-    const q = formData.get("q");
+    const q = new FormData($searchbar).get("q");
     let href = baseUrl();
-    if (q) {
-      href += "?q=" + q;
-    }
+    if (q) href += "?q=" + q;
     location.href = href;
   });
   if (PARAMS.q) {
-    document.getElementById('search').value = PARAMS.q;
+    document.getElementById("search").value = PARAMS.q;
   }
 }
 
 function setupUploadFile() {
   document.querySelector(".upload-file").classList.remove("hidden");
   document.getElementById("file").addEventListener("change", async e => {
-    const files = e.target.files;
-    for (let file of files) {
+    for (const file of e.target.files) {
       new Uploader(file, []).upload();
     }
   });
@@ -627,9 +459,7 @@ async function setupEditorPage() {
     $moveFile.addEventListener("click", async () => {
       const query = location.href.slice(url.length);
       const newFileUrl = await doMovePath(url);
-      if (newFileUrl) {
-        location.href = newFileUrl + query;
-      }
+      if (newFileUrl) location.href = newFileUrl + query;
     });
 
     const $deleteFile = document.querySelector(".delete-file");
@@ -673,20 +503,13 @@ async function setupEditorPage() {
       $editor.value = await res.text();
     } else {
       const bytes = await res.arrayBuffer();
-      const dataView = new DataView(bytes);
-      const decoder = new TextDecoder(encoding);
-      $editor.value = decoder.decode(dataView);
+      $editor.value = new TextDecoder(encoding).decode(new DataView(bytes));
     }
   } catch (err) {
     alert(`Failed to get file, ${err.message}`);
   }
 }
 
-/**
- * Delete path
- * @param {number} index
- * @returns
- */
 async function deletePath(index) {
   const file = DATA.paths[index];
   if (!file) return;
@@ -705,26 +528,18 @@ async function doDeletePath(name, url, cb) {
   if (!confirm(`Delete \`${name}\`?`)) return;
   try {
     await checkAuth();
-    const res = await fetch(url, {
-      method: "DELETE",
-    });
+    const res = await fetch(url, { method: "DELETE" });
     await assertResOK(res);
     cb();
   } catch (err) {
-    alert(`Cannot delete \`${file.name}\`, ${err.message}`);
+    alert(`Cannot delete \`${name}\`, ${err.message}`);
   }
 }
 
-/**
- * Move path
- * @param {number} index
- * @returns
- */
 async function movePath(index) {
   const file = DATA.paths[index];
   if (!file) return;
-  const fileUrl = newUrl(file.name);
-  const newFileUrl = await doMovePath(fileUrl);
+  const newFileUrl = await doMovePath(newUrl(file.name));
   if (newFileUrl) {
     location.href = newFileUrl.split("/").slice(0, -1).join("/");
   }
@@ -732,9 +547,7 @@ async function movePath(index) {
 
 async function doMovePath(fileUrl) {
   const fileUrlObj = new URL(fileUrl);
-
   const prefix = DATA.uri_prefix.slice(0, -1);
-
   const filePath = decodeURIComponent(fileUrlObj.pathname.slice(prefix.length));
 
   let newPath = prompt("Enter new path", filePath);
@@ -745,19 +558,13 @@ async function doMovePath(fileUrl) {
 
   try {
     await checkAuth();
-    const res1 = await fetch(newFileUrl, {
-      method: "HEAD",
-    });
+    const res1 = await fetch(newFileUrl, { method: "HEAD" });
     if (res1.status === 200) {
-      if (!confirm("Override existing file?")) {
-        return;
-      }
+      if (!confirm("Override existing file?")) return;
     }
     const res2 = await fetch(fileUrl, {
       method: "MOVE",
-      headers: {
-        "Destination": newFileUrl,
-      }
+      headers: { "Destination": newFileUrl },
     });
     await assertResOK(res2);
     return newFileUrl;
@@ -766,16 +573,9 @@ async function doMovePath(fileUrl) {
   }
 }
 
-
-/**
- * Save editor change
- */
 async function saveChange() {
   try {
-    await fetch(baseUrl(), {
-      method: "PUT",
-      body: $editor.value,
-    });
+    await fetch(baseUrl(), { method: "PUT", body: $editor.value });
     location.reload();
   } catch (err) {
     alert(`Failed to save file, ${err.message}`);
@@ -785,9 +585,7 @@ async function saveChange() {
 async function checkAuth(variant) {
   if (!DATA.auth) return;
   const qs = variant ? `?${variant}` : "";
-  const res = await fetch(baseUrl() + qs, {
-    method: "CHECKAUTH",
-  });
+  const res = await fetch(baseUrl() + qs, { method: "CHECKAUTH" });
   await assertResOK(res);
   $loginBtn.classList.add("hidden");
   $logoutBtn.classList.remove("hidden");
@@ -799,23 +597,15 @@ function logout() {
   const url = baseUrl();
   const xhr = new XMLHttpRequest();
   xhr.open("LOGOUT", url, true, DATA.user);
-  xhr.onload = () => {
-    location.href = url;
-  }
+  xhr.onload = () => { location.href = url; };
   xhr.send();
 }
 
-/**
- * Create a folder
- * @param {string} name
- */
 async function createFolder(name) {
   const url = newUrl(name);
   try {
     await checkAuth();
-    const res = await fetch(url, {
-      method: "MKCOL",
-    });
+    const res = await fetch(url, { method: "MKCOL" });
     await assertResOK(res);
     location.href = url;
   } catch (err) {
@@ -827,10 +617,7 @@ async function createFile(name) {
   const url = newUrl(name);
   try {
     await checkAuth();
-    const res = await fetch(url, {
-      method: "PUT",
-      body: "",
-    });
+    const res = await fetch(url, { method: "PUT", body: "" });
     await assertResOK(res);
     location.href = url + "?edit";
   } catch (err) {
@@ -841,30 +628,24 @@ async function createFile(name) {
 async function addFileEntries(entries, dirs) {
   for (const entry of entries) {
     if (entry.isFile) {
-      entry.file(file => {
-        new Uploader(file, dirs).upload();
-      });
+      entry.file(file => { new Uploader(file, dirs).upload(); });
     } else if (entry.isDirectory) {
       const dirReader = entry.createReader();
-
       const successCallback = entries => {
         if (entries.length > 0) {
           addFileEntries(entries, [...dirs, entry.name]);
           dirReader.readEntries(successCallback);
         }
       };
-
       dirReader.readEntries(successCallback);
     }
   }
 }
 
-
 function newUrl(name) {
   let url = baseUrl();
   if (!url.endsWith("/")) url += "/";
-  url += name.split("/").map(encodeURIComponent).join("/");
-  return url;
+  return url + name.split("/").map(encodeURIComponent).join("/");
 }
 
 function baseUrl() {
@@ -876,41 +657,25 @@ function baseName(url) {
 }
 
 function extName(filename) {
-  const dotIndex = filename.lastIndexOf('.');
-
-  if (dotIndex === -1 || dotIndex === 0 || dotIndex === filename.length - 1) {
-    return '';
-  }
-
-  return filename.substring(dotIndex);
+  const dot = filename.lastIndexOf(".");
+  if (dot <= 0 || dot === filename.length - 1) return "";
+  return filename.substring(dot);
 }
 
 function getPathSvg(path_type) {
   switch (path_type) {
-    case "Dir":
-      return ICONS.dir;
-    case "SymlinkFile":
-      return ICONS.symlinkFile;
-    case "SymlinkDir":
-      return ICONS.symlinkDir;
-    default:
-      return ICONS.file;
+    case "Dir": return ICONS.dir;
+    case "SymlinkFile": return ICONS.symlinkFile;
+    case "SymlinkDir": return ICONS.symlinkDir;
+    default: return ICONS.file;
   }
 }
 
 function formatMtime(mtime) {
   if (!mtime) return "";
-  const date = new Date(mtime);
-  const year = date.getFullYear();
-  const month = padZero(date.getMonth() + 1, 2);
-  const day = padZero(date.getDate(), 2);
-  const hours = padZero(date.getHours(), 2);
-  const minutes = padZero(date.getMinutes(), 2);
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
-}
-
-function padZero(value, size) {
-  return ("0".repeat(size) + value).slice(-1 * size);
+  const d = new Date(mtime);
+  const pad = (v) => String(v).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function formatDirSize(size) {
@@ -920,15 +685,11 @@ function formatDirSize(size) {
 }
 
 function formatFileSize(size) {
-  if (size == null) return [0, "B"];
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  if (size == 0) return [0, "B"];
-  const i = parseInt(Math.floor(Math.log(size) / Math.log(1024)));
-  let ratio = 1;
-  if (i >= 3) {
-    ratio = 100;
-  }
-  return [Math.round(size * ratio / Math.pow(1024, i), 2) / ratio, sizes[i]];
+  if (size == null || size == 0) return [0, "B"];
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(size) / Math.log(1024));
+  const ratio = i >= 3 ? 100 : 1;
+  return [Math.round(size * ratio / Math.pow(1024, i)) / ratio, sizes[i]];
 }
 
 function formatDuration(seconds) {
@@ -936,21 +697,16 @@ function formatDuration(seconds) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds - h * 3600) / 60);
   const s = seconds - h * 3600 - m * 60;
-  return `${padZero(h, 2)}:${padZero(m, 2)}:${padZero(s, 2)}`;
+  const pad = (v) => String(v).padStart(2, "0");
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
 function formatPercent(percent) {
-  if (percent > 10) {
-    return percent.toFixed(1) + "%";
-  } else {
-    return percent.toFixed(2) + "%";
-  }
+  return percent > 10 ? percent.toFixed(1) + "%" : percent.toFixed(2) + "%";
 }
 
 function encodedStr(rawStr) {
-  return rawStr.replace(/[\u00A0-\u9999<>\&]/g, function (i) {
-    return '&#' + i.charCodeAt(0) + ';';
-  });
+  return rawStr.replace(/[\u00A0-\u9999<>\&]/g, i => "&#" + i.charCodeAt(0) + ";");
 }
 
 async function assertResOK(res) {
@@ -962,15 +718,12 @@ async function assertResOK(res) {
 function getEncoding(contentType) {
   const charset = contentType?.split(";")[1];
   if (/charset/i.test(charset)) {
-    let encoding = charset.split("=")[1];
-    if (encoding) {
-      return encoding.toLowerCase();
-    }
+    const encoding = charset.split("=")[1];
+    if (encoding) return encoding.toLowerCase();
   }
-  return 'utf-8';
+  return "utf-8";
 }
 
-// Parsing base64 strings with Unicode characters
 function decodeBase64(base64String) {
   const binString = atob(base64String);
   const len = binString.length;
